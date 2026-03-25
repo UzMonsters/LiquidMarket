@@ -1,23 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useApp } from '../AppContext';
 import { ShieldCheck, Plus, Check, X, Users, History, BarChart3, ChevronRight } from 'lucide-react';
 import { Outcome } from '../types';
+import { apiAdminGetTrades, type AdminTrade } from '../lib/api';
 
 const AdminPage = () => {
-  const { markets, trades, createMarket, closeMarket, resolveMarket } = useApp();
+  const { markets, createMarket, closeMarket, resolveMarket } = useApp();
   const [newMarketTitle, setNewMarketTitle] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [adminTrades, setAdminTrades] = useState<AdminTrade[]>([]);
 
-  const handleCreateMarket = (e: React.FormEvent) => {
+  useEffect(() => {
+    apiAdminGetTrades().then(setAdminTrades).catch(console.error);
+  }, [markets]);
+
+  const handleCreateMarket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newMarketTitle.trim()) {
       setIsCreating(true);
-      setTimeout(() => {
-        createMarket(newMarketTitle.trim());
+      try {
+        await createMarket(newMarketTitle.trim());
         setNewMarketTitle('');
+      } finally {
         setIsCreating(false);
-      }, 500);
+      }
     }
   };
 
@@ -148,7 +155,7 @@ const AdminPage = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-6 bg-white/5 border border-white/10 rounded-3xl">
                 <div className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Total Trades</div>
-                <div className="text-2xl font-mono font-bold">{trades.length}</div>
+                <div className="text-2xl font-mono font-bold">{adminTrades.length}</div>
               </div>
               <div className="p-6 bg-white/5 border border-white/10 rounded-3xl">
                 <div className="text-[10px] uppercase tracking-widest text-white/40 font-bold mb-1">Active Markets</div>
@@ -164,7 +171,7 @@ const AdminPage = () => {
               <span className="text-[10px] uppercase tracking-widest font-bold">Global Trade Log</span>
             </div>
             <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-              {trades.map((trade, index) => (
+              {adminTrades.map((trade) => (
                 <div
                   key={trade.id}
                   className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between text-xs"
@@ -173,7 +180,7 @@ const AdminPage = () => {
                     <div className="font-bold flex items-center gap-2">
                       <span className={trade.side === 'BUY' ? 'text-green-400' : 'text-red-400'}>{trade.side}</span>
                       <span className="text-white/40">by</span>
-                      <span>User_{trade.userId.substr(0, 4)}</span>
+                      <span>{trade.username || `User_${trade.user_id}`}</span>
                     </div>
                     <div className="text-white/40 mt-1">
                       {trade.shares.toFixed(0)} shares of {trade.outcome}
@@ -182,7 +189,7 @@ const AdminPage = () => {
                   <div className="text-right">
                     <div className="font-mono font-bold">${trade.amount.toFixed(2)}</div>
                     <div className="text-white/20 font-mono">
-                      {new Date(trade.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(trade.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 </div>

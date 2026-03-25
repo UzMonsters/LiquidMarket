@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../AppContext';
 import { ArrowLeft, TrendingUp, TrendingDown, Info, ShoppingCart, BarChart3, Wallet, ChevronRight } from 'lucide-react';
 import { Outcome, TradeSide } from '../types';
+import { apiTradeQuote, type QuoteResponse } from '../lib/api';
 
 const MarketDetailPage = () => {
   const { id } = useParams();
@@ -17,20 +18,46 @@ const MarketDetailPage = () => {
   const [outcome, setOutcome] = useState<Outcome>('YES');
   const [amount, setAmount] = useState<string>('100');
   const [isExecuting, setIsExecuting] = useState(false);
+  const [quote, setQuote] = useState<QuoteResponse | null>(null);
+
+  const fetchQuote = useCallback(async () => {
+    if (!user || !market || !amount || parseFloat(amount) <= 0) {
+      setQuote(null);
+      return;
+    }
+    try {
+      const q = await apiTradeQuote({
+        user_id: Number(user.id),
+        market_id: Number(market.id),
+        side,
+        outcome,
+        amount: parseFloat(amount),
+      });
+      setQuote(q);
+    } catch {
+      setQuote(null);
+    }
+  }, [user, market?.id, side, outcome, amount]);
+
+  useEffect(() => {
+    const timer = setTimeout(fetchQuote, 300);
+    return () => clearTimeout(timer);
+  }, [fetchQuote]);
 
   if (!market) return <div>Market not found</div>;
 
   const currentPrice = outcome === 'YES' ? market.priceYes : market.priceNo;
-  const shares = parseFloat(amount) / currentPrice || 0;
-  const fee = parseFloat(amount) * 0.01;
-  const totalAmount = parseFloat(amount) + fee;
+  const shares = quote?.shares ?? (parseFloat(amount) / currentPrice || 0);
+  const fee = quote?.fee ?? (parseFloat(amount) * 0.01);
+  const totalAmount = quote?.total_cost ?? (parseFloat(amount) + fee);
 
-  const handleExecute = () => {
+  const handleExecute = async () => {
     setIsExecuting(true);
-    setTimeout(() => {
-      executeTrade(market.id, side, outcome, parseFloat(amount));
+    try {
+      await executeTrade(market.id, side, outcome, parseFloat(amount));
+    } finally {
       setIsExecuting(false);
-    }, 1000);
+    }
   };
 
   const pnl = position 

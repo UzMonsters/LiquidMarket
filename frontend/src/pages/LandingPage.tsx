@@ -7,10 +7,10 @@ const LandingPage = () => {
   const [username, setUsername] = useState('');
   const { login } = useApp();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (username.trim()) {
-      login(username.trim());
+      await login(username.trim());
     }
   };
 

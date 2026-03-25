@@ -1,18 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useApp } from '../AppContext';
 import { Users, Trophy, TrendingUp, Medal, Crown, Star } from 'lucide-react';
-
-const MOCK_LEADERBOARD = [
-  { id: '1', username: 'whale_trader', balance: 523400, winRate: 78, trades: 156 },
-  { id: '2', username: 'crypto_king', balance: 412300, winRate: 72, trades: 203 },
-  { id: '3', username: 'diamond_hands', balance: 389100, winRate: 69, trades: 89 },
-  { id: '4', username: 'moon_boy', balance: 245600, winRate: 65, trades: 134 },
-  { id: '5', username: 'degen_master', balance: 198400, winRate: 61, trades: 312 },
-  { id: '6', username: 'smart_money', balance: 167800, winRate: 58, trades: 67 },
-  { id: '7', username: 'risk_taker', balance: 145200, winRate: 55, trades: 245 },
-  { id: '8', username: 'steady_wins', balance: 134500, winRate: 52, trades: 178 },
-];
+import { apiAdminGetUsers, type AdminUser } from '../lib/api';
 
 const getRankIcon = (rank: number) => {
   if (rank === 1) return <Crown size={18} className="text-yellow-400" />;
@@ -23,11 +13,17 @@ const getRankIcon = (rank: number) => {
 
 const UsersPage = () => {
   const { user, trades } = useApp();
+  const [leaderboard, setLeaderboard] = useState<AdminUser[]>([]);
+
+  useEffect(() => {
+    apiAdminGetUsers().then(setLeaderboard).catch(console.error);
+  }, []);
 
   if (!user) return null;
 
   const userTrades = trades.filter(t => t.userId === user.id);
-  const userRank = MOCK_LEADERBOARD.findIndex(u => u.balance < user.balance) + 1 || MOCK_LEADERBOARD.length + 1;
+  const sorted = [...leaderboard].sort((a, b) => b.balance - a.balance);
+  const userRank = sorted.findIndex(u => String(u.id) === user.id) + 1 || sorted.length + 1;
 
   return (
     <div className="space-y-12">
@@ -61,7 +57,7 @@ const UsersPage = () => {
           </div>
 
           <div className="space-y-4">
-            {MOCK_LEADERBOARD.map((trader, index) => (
+            {sorted.map((trader, index) => (
               <motion.div
                 key={trader.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -81,14 +77,14 @@ const UsersPage = () => {
                     <div>
                       <h4 className="text-lg font-bold tracking-tight">{trader.username}</h4>
                       <div className="text-[10px] uppercase tracking-widest text-white/40 font-bold">
-                        {trader.trades} trades
+                        {trader.total_trades} trades
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-12">
                     <div className="flex flex-col items-end">
-                      <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Win Rate</span>
-                      <span className="text-lg font-mono font-bold text-green-400">{trader.winRate}%</span>
+                      <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Volume</span>
+                      <span className="text-lg font-mono font-bold text-green-400">${trader.total_volume.toLocaleString()}</span>
                     </div>
                     <div className="flex flex-col items-end">
                       <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Balance</span>
