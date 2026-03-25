@@ -1,0 +1,5 @@
+{
+  "name": "Liquid Markets",
+  "description": "A minimalistic prediction market platform with real-time price discovery.",
+  "requestFramePermissions": []
+}
